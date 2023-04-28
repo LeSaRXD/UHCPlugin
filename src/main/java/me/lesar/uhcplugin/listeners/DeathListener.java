@@ -51,7 +51,7 @@ public class DeathListener implements Listener {
 
 			}
 
-			e.setDeathMessage(player.getName() + " has been eliminated! " + plugin.alivePlayers.size() + " players remain!");
+			e.setDeathMessage(ChatColor.RED + player.getName() + " has been eliminated! " + plugin.alivePlayers.size() + " players remain!");
 
 		}
 

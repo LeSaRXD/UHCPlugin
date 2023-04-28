@@ -10,7 +10,7 @@ website: https://github.com/LeSaRXD
 commands:
   startuhc:
     description: Starts the UHC
-    usage: "/startuhc <pvp delay in minutes> <border shrink time in minutes> <final border radius>"
+    usage: "/startuhc <pvp delay in minutes> <border shrink time in minutes> <start border radius> <end border radius>"
     permission: uhc.manage.start
     permission-message: "You aren't allowed to use this command!"
   stopuhc:

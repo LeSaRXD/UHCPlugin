@@ -2,10 +2,7 @@ package me.lesar.uhcplugin;
 
 import me.lesar.uhcplugin.commands.*;
 import me.lesar.uhcplugin.listeners.*;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.GameMode;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -13,6 +10,8 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.*;
 
 public final class UHCPlugin extends JavaPlugin {
+
+	private static final long MIN_DISTANCE_BETWEEN_PLAYERS = 100L;
 
 	private boolean isActive = false;
 	private boolean isPvPDisabled = false;
@@ -57,21 +56,15 @@ public final class UHCPlugin extends JavaPlugin {
 
 
 
-	public void startUHCDisablePvP(float graceTimeInMinutes, float borderShrinkTimeInMinutes, long finalBorderRadius, World uhcWorld) {
-
-		currentTasks.add(getServer().getScheduler().runTaskTimer(this, () -> Bukkit.getLogger().info(uhcWorld.getWorldBorder().getSize() + ""), 0L, 20L));
+	public void startUHCDisablePvP(float graceTimeInMinutes, float borderShrinkTimeInMinutes, long startBorderRadius, long endBorderRadius, World uhcWorld) {
 
 		isActive = true;
 		isPvPDisabled = true;
 		this.uhcWorld = uhcWorld;
 
-		alivePlayers = new HashSet<>(allPlayers);
-		for(Player player : allPlayers) {
+		uhcWorld.getWorldBorder().setSize(startBorderRadius);
 
-			player.setGameMode(GameMode.SURVIVAL);
-			player.sendTitle(ChatColor.GREEN + "UHC has started!", ChatColor.GREEN + "PvP has been disabled");
-
-		}
+		initPlayers(startBorderRadius);
 
 		Bukkit.getLogger().info("UHC was started. PvP has been disabled for " + graceTimeInMinutes + " minutes");
 
@@ -123,10 +116,58 @@ public final class UHCPlugin extends JavaPlugin {
 			isPvPDisabled = false;
 			Bukkit.getLogger().info("PvP has been re-enabled");
 
-			Bukkit.getLogger().info("Shrinking border to " + finalBorderRadius + " blocks in " + borderShrinkTimeInMinutes + " minutes");
-			uhcWorld.getWorldBorder().setSize(finalBorderRadius, (long) (borderShrinkTimeInMinutes * 60));
+			Bukkit.getLogger().info("Shrinking border to " + endBorderRadius + " blocks in " + borderShrinkTimeInMinutes + " minutes");
+			uhcWorld.getWorldBorder().setSize(endBorderRadius, (long) (borderShrinkTimeInMinutes * 60));
 
 		}, timeInTicks));
+
+	}
+
+	private void initPlayers(long size) {
+
+		float minDistanceBetweenPlayers = (float) Math.min(MIN_DISTANCE_BETWEEN_PLAYERS, size / 2);
+
+		alivePlayers = new HashSet<>(allPlayers);
+
+		List<Location> spawnLocations = new ArrayList<>();
+		Random random = new Random();
+
+		for(Player player : alivePlayers) {
+
+			int x = 0, z = 0;
+
+			boolean isGoodLocation = false;
+
+			while(!isGoodLocation){
+
+				isGoodLocation = true;
+				x = (int) (random.nextLong(-size / 2, size / 2));
+				z = (int) (random.nextLong(-size / 2, size / 2));
+
+				for(Location location : spawnLocations) {
+
+					double distX = (double) x - location.getX(), distZ = (double) z - location.getZ();
+					double distance = Math.sqrt(distX * distX + distZ * distZ);
+					System.out.println(x + " " + z + "   " + location.getX() + " " + location.getZ() + "   " + distance);
+					if(distance < minDistanceBetweenPlayers) {
+
+						isGoodLocation = false;
+						break;
+
+					}
+
+				}
+
+			}
+
+			Location spawnLocation = new Location(uhcWorld, x, uhcWorld.getHighestBlockAt(x, z).getY() + 1, z);
+			player.teleport(spawnLocation);
+			spawnLocations.add(spawnLocation);
+
+			player.setGameMode(GameMode.SURVIVAL);
+			player.sendTitle(ChatColor.GREEN + "UHC has started!", ChatColor.GREEN + "PvP has been disabled");
+
+		}
 
 	}
 
@@ -138,6 +179,7 @@ public final class UHCPlugin extends JavaPlugin {
 		allPlayers.clear();
 		alivePlayers.clear();
 
+		for(BukkitTask task : currentTasks) task.cancel();
 		this.uhcWorld.getWorldBorder().setSize(this.uhcWorld.getWorldBorder().getSize());
 
 	}
@@ -145,8 +187,6 @@ public final class UHCPlugin extends JavaPlugin {
 	public void forceStopUHC() {
 
 		Bukkit.getLogger().info("UHC has stopped. PvP has been re-enabled");
-
-		for(BukkitTask task : currentTasks) task.cancel();
 
 		for(Player player : allPlayers) player.sendTitle(ChatColor.RED + "UHC has ended!", "");
 

@@ -44,7 +44,7 @@ public class StartUHCCommand implements CommandExecutor {
 
 		}
 
-		if(args.length < 3) return false;
+		if(args.length < 4) return false;
 
 		try {
 
@@ -64,15 +64,27 @@ public class StartUHCCommand implements CommandExecutor {
 
 			}
 
-			long finalBorderRadius = Long.parseLong(args[2]);
-			if(finalBorderRadius < 10) {
+			long startBorderRadius = Long.parseLong(args[2]);
+			if(startBorderRadius < 10) {
 
-				sender.sendMessage(ChatColor.RED + "The final border radius has to be at least 10 blocks");
+				sender.sendMessage(ChatColor.RED + "The start border size has to be at least 10 blocks");
+				return true;
+
+			}
+			long endBorderRadius = Long.parseLong(args[3]);
+			if(endBorderRadius > startBorderRadius) {
+
+				sender.sendMessage(ChatColor.RED + "The end border can't be bigger than the start size");
+				return true;
+				
+			} else if(endBorderRadius < 10) {
+
+				sender.sendMessage(ChatColor.RED + "The end border size has to be at least 10 blocks");
 				return true;
 
 			}
 
-			plugin.startUHCDisablePvP(timer, borderShrinkTime, finalBorderRadius, ((Player) sender).getWorld());
+			plugin.startUHCDisablePvP(timer, borderShrinkTime, startBorderRadius, endBorderRadius, ((Player) sender).getWorld());
 
 		} catch (NumberFormatException e) {
 
