@@ -1,0 +1,61 @@
+name: UHC
+version: '${project.version}'
+main: me.lesar.uhcplugin.UHCPlugin
+api-version: 1.19
+description: Simple UHC plugin
+authors:
+  - LeSaR
+website: https://github.com/LeSaRXD
+
+commands:
+  startuhc:
+    description: Starts the UHC
+    usage: "/startuhc <pvp delay in minutes> <border shrink time in minutes> <final border radius>"
+    permission: uhc.manage.start
+    permission-message: "You aren't allowed to use this command!"
+  stopuhc:
+    description: Force stops the UHC
+    usage: "/stopuhc"
+    permission: uhc.manage.stop
+    permission-message: "You aren't allowed to use this command!"
+
+  addplayer:
+    description: Adds a player to the UHC list
+    usage: "/addplayer <player>"
+    permission: uhc.players.add
+    permission-message: "You aren't allowed to use this command!"
+  removeplayer:
+    description: Removes a player from the UHC list
+    usage: "/removeplayer <player>"
+    permission: uhc.players.remove
+    permission-message: "You aren't allowed to use this command!"
+  clearplayers:
+    description: Removes all players from the UHC list
+    usage: "/clearplayers"
+    permission: uhc.players.remove
+    permission-message: "You aren't allowed to use this command!"
+  listplayers:
+    description: Lists all players in the UHC list
+    usage: "/listplayers"
+    permission: uhc.players.list
+    permission-message: "You aren't allowed to use this command!"
+
+permissions:
+  uhc:
+    manage:
+      start:
+        description: Allows to start the UHC
+        default: op
+      stop:
+        description: Allows to stop the UHC
+        default: op
+    players:
+      add:
+        description: Allows to add players to the UHC list
+        default: op
+      remove:
+        description: Allows to remove players from the UHC list
+        default: op
+      list:
+        description: Allows to list players in the UHC list
+        default: true
