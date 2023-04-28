@@ -51,6 +51,7 @@ public final class UHCPlugin extends JavaPlugin {
 
 		new PvPListener(this);
 		new DeathListener(this);
+		new DisconnectListener(this);
 
 	}
 
@@ -137,7 +138,6 @@ public final class UHCPlugin extends JavaPlugin {
 			int x = 0, z = 0;
 
 			boolean isGoodLocation = false;
-
 			while(!isGoodLocation){
 
 				isGoodLocation = true;
@@ -165,13 +165,19 @@ public final class UHCPlugin extends JavaPlugin {
 			spawnLocations.add(spawnLocation);
 
 			player.setGameMode(GameMode.SURVIVAL);
+
+			player.setHealth(20);
+			player.setFoodLevel(20);
+			player.setSaturation(0.6f);
+			player.setExhaustion(0f);
+
 			player.sendTitle(ChatColor.GREEN + "UHC has started!", ChatColor.GREEN + "PvP has been disabled");
 
 		}
 
 	}
 
-	public void stopUHC() {
+	private void stopUHC() {
 
 		isActive = false;
 		isPvPDisabled = false;
@@ -181,6 +187,18 @@ public final class UHCPlugin extends JavaPlugin {
 
 		for(BukkitTask task : currentTasks) task.cancel();
 		this.uhcWorld.getWorldBorder().setSize(this.uhcWorld.getWorldBorder().getSize());
+
+	}
+
+	public void finishUHC() {
+
+		Player lastPlayer = (Player) alivePlayers.toArray()[0];
+		for(Player uhcPlayer : allPlayers)
+			uhcPlayer.sendTitle(ChatColor.GOLD + lastPlayer.getName(), ChatColor.GOLD + "has won the UHC!");
+
+		lastPlayer.setGameMode(GameMode.CREATIVE);
+
+		stopUHC();
 
 	}
 

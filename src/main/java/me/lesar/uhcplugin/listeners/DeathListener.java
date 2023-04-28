@@ -4,13 +4,13 @@ import me.lesar.uhcplugin.UHCPlugin;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
+import org.bukkit.inventory.ItemStack;
 
 public class DeathListener implements Listener {
 
@@ -42,15 +42,7 @@ public class DeathListener implements Listener {
 			if(plugin.alivePlayers.size() == 1) {
 
 				e.setCancelled(true);
-
-				Player lastPlayer = (Player) plugin.alivePlayers.toArray()[0];
-				for(Player uhcPlayer : plugin.allPlayers)
-					uhcPlayer.sendTitle(ChatColor.GOLD + lastPlayer.getName(), ChatColor.GOLD + "has won the UHC!");
-
-				lastPlayer.setGameMode(GameMode.CREATIVE);
-
-				plugin.stopUHC();
-
+				plugin.finishUHC();
 				return;
 
 			}
@@ -59,9 +51,11 @@ public class DeathListener implements Listener {
 			if(killer != null) {
 
 				e.setDeathMessage(ChatColor.RED + player.getName() + " has been eliminated by " + killer.getName() + "! " + plugin.alivePlayers.size() + " players remain!");
-				killer.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 20 * 5, 0));
 
-			} else e.setDeathMessage(ChatColor.RED + player.getName() + " has been eliminated!" + plugin.alivePlayers.size() + " players remain!");
+//				killer.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 20 * 5, 0));
+				killer.getInventory().addItem(new ItemStack(Material.GOLDEN_APPLE));
+
+			} else e.setDeathMessage(ChatColor.RED + player.getName() + " has been eliminated! " + plugin.alivePlayers.size() + " players remain!");
 
 		}
 
