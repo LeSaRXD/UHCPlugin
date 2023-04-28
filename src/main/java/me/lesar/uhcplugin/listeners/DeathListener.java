@@ -9,6 +9,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 public class DeathListener implements Listener {
 
@@ -49,9 +51,17 @@ public class DeathListener implements Listener {
 
 				plugin.stopUHC();
 
+				return;
+
 			}
 
-			e.setDeathMessage(ChatColor.RED + player.getName() + " has been eliminated! " + plugin.alivePlayers.size() + " players remain!");
+			Player killer = player.getKiller();
+			if(killer != null) {
+
+				e.setDeathMessage(ChatColor.RED + player.getName() + " has been eliminated by " + killer.getName() + "! " + plugin.alivePlayers.size() + " players remain!");
+				killer.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 20 * 5, 0));
+
+			} else e.setDeathMessage(ChatColor.RED + player.getName() + " has been eliminated!" + plugin.alivePlayers.size() + " players remain!");
 
 		}
 
