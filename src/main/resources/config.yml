@@ -1,0 +1,8 @@
+minimum_distance_between_players: 100
+auto:
+  minimum_players: 5
+  start_countdown_timer: 30
+  grace_timer: 10
+  border_shrink_timer: 20
+  start_border_size_per_player: 100
+  end_border_size: 50

@@ -6,12 +6,12 @@ import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
+import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
 import java.util.*;
 
 public final class UHCPlugin extends JavaPlugin {
-
-	private static final long MIN_DISTANCE_BETWEEN_PLAYERS = 100L;
 
 	private boolean isActive = false;
 	private boolean isPvPDisabled = false;
@@ -23,15 +23,26 @@ public final class UHCPlugin extends JavaPlugin {
 	}
 
 	public Set<Player> allPlayers = new HashSet<>(), alivePlayers = new HashSet<>();
-	private World uhcWorld;
+
+	public String uhcWorldName;
+	public World uhcWorld, currentUhcWorld;
 
 	private Set<BukkitTask> currentTasks = new HashSet<>();
 
 	@Override
 	public void onEnable() {
 
+		initConfig();
+
 		registerCommands();
 		registerListeners();
+
+	}
+
+	private void initConfig() {
+
+		getConfig().options().copyDefaults(true);
+		saveConfig();
 
 	}
 
@@ -39,6 +50,9 @@ public final class UHCPlugin extends JavaPlugin {
 
 		new StartUHCCommand(this);
 		new StopUHCCommand(this);
+
+		new SetUHCWorldCommand(this);
+		new JoinUHCCommand(this);
 
 		new AddPlayerCommand(this);
 		new RemovePlayerCommand(this);
@@ -57,11 +71,68 @@ public final class UHCPlugin extends JavaPlugin {
 
 
 
-	public void startUHCDisablePvP(float graceTimeInMinutes, float borderShrinkTimeInMinutes, long startBorderRadius, long endBorderRadius, World uhcWorld) {
+	public void createUHCWorld() {
+
+		if(uhcWorldName == null) return;
+
+		WorldCreator creator = new WorldCreator(uhcWorldName);
+		uhcWorld = creator.createWorld();
+
+		uhcWorld.getWorldBorder().setCenter(0, 0);
+		uhcWorld.getWorldBorder().setSize(20);
+		uhcWorld.setDifficulty(Difficulty.PEACEFUL);
+
+		Bukkit.getLogger().info("Generating a new UHC world");
+
+	}
+
+
+
+	private BukkitTask startTimerTask;
+
+	public void resetStartTimer() {
+
+		if(startTimerTask != null) startTimerTask.cancel();
+		if(allPlayers.size() < getConfig().getInt("auto.minimum_players")) return;
+
+		int startTimer = getConfig().getInt("auto.start_countdown_timer");
+
+		startTimerTask = getServer().getScheduler().runTaskLater(this, () -> startAutomatedUHC(), startTimer * 20L);
+		for(Player player : allPlayers) player.sendMessage(ChatColor.GREEN + "The UHC starts in " + startTimer + " seconds!");
+
+	}
+
+	public void cancelStartTimer() {
+
+		if(startTimerTask == null) return;
+		if(startTimerTask.isCancelled()) return;
+		if(allPlayers.size() >= getConfig().getInt("auto.minimum_players")) return;
+
+		startTimerTask.cancel();
+		for(Player player : allPlayers) player.sendMessage(ChatColor.RED + "The UHC has been cancelled");
+
+	}
+
+	private void startAutomatedUHC() {
+
+		uhcWorld.setDifficulty(Difficulty.NORMAL);
+		startUHCDisablePvP(
+			(float) getConfig().getDouble("auto.grace_timer"),
+			(float) getConfig().getDouble("auto.border_shrink_timer"),
+			getConfig().getLong("auto.start_border_size_per_player") * allPlayers.size(),
+			getConfig().getLong("auto.end_border_size"),
+			uhcWorld
+		);
+
+	}
+
+
+
+	public void startUHCDisablePvP(float graceTimeInMinutes, float borderShrinkTimeInMinutes, long startBorderRadius, long endBorderRadius, @NotNull World uhcWorld) {
 
 		isActive = true;
 		isPvPDisabled = true;
-		this.uhcWorld = uhcWorld;
+		this.currentUhcWorld = uhcWorld;
 
 		uhcWorld.getWorldBorder().setSize(startBorderRadius);
 
@@ -126,7 +197,7 @@ public final class UHCPlugin extends JavaPlugin {
 
 	private void initPlayers(long size) {
 
-		float minDistanceBetweenPlayers = (float) Math.min(MIN_DISTANCE_BETWEEN_PLAYERS, size / 2);
+		float minDistanceBetweenPlayers = (float) Math.min(getConfig().getInt("min_distance_between_players"), size / 2);
 
 		alivePlayers = new HashSet<>(allPlayers);
 
@@ -141,8 +212,8 @@ public final class UHCPlugin extends JavaPlugin {
 			while(!isGoodLocation){
 
 				isGoodLocation = true;
-				x = (int) (random.nextLong(-size / 2, size / 2));
-				z = (int) (random.nextLong(-size / 2, size / 2));
+				x = (int) (random.nextLong(-size / 2, size / 2)) + (int) uhcWorld.getWorldBorder().getCenter().getX();
+				z = (int) (random.nextLong(-size / 2, size / 2)) + (int) uhcWorld.getWorldBorder().getCenter().getZ();
 
 				for(Location location : spawnLocations) {
 
@@ -160,7 +231,7 @@ public final class UHCPlugin extends JavaPlugin {
 
 			}
 
-			Location spawnLocation = new Location(uhcWorld, x, uhcWorld.getHighestBlockAt(x, z).getY() + 1, z);
+			Location spawnLocation = new Location(currentUhcWorld, x, currentUhcWorld.getHighestBlockAt(x, z).getY() + 1, z);
 			player.teleport(spawnLocation);
 			spawnLocations.add(spawnLocation);
 
@@ -186,7 +257,7 @@ public final class UHCPlugin extends JavaPlugin {
 		alivePlayers.clear();
 
 		for(BukkitTask task : currentTasks) task.cancel();
-		this.uhcWorld.getWorldBorder().setSize(this.uhcWorld.getWorldBorder().getSize());
+		this.currentUhcWorld.getWorldBorder().setSize(this.currentUhcWorld.getWorldBorder().getSize());
 
 	}
 
