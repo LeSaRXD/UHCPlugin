@@ -2,6 +2,9 @@ name: UHC
 version: '${project.version}'
 main: me.lesar.uhcplugin.UHCPlugin
 api-version: 1.19
+depend:
+  - Multiverse-Core
+
 description: Simple UHC plugin
 authors:
   - LeSaR
@@ -17,17 +20,6 @@ commands:
     description: Force stops the UHC
     usage: "/stopuhc"
     permission: uhc.manage.stop
-    permission-message: "You aren't allowed to use this command!"
-
-  setuhcworld:
-    description: Sets or removes the world for automated UHCs to happen
-    usage: "/setuhcworld [<world name>]"
-    permission: uhc.manage.automation.setworld
-    permission-message: "You aren't allowed to use this command!"
-  joinuhc:
-    description: Joins the automated UHC
-    usage: "/joinuhc"
-    permission: uhc.join
     permission-message: "You aren't allowed to use this command!"
 
   addplayer:
@@ -54,10 +46,6 @@ commands:
 permissions:
   uhc:
     manage:
-      automation:
-        setworld:
-          description: Allows to set the UHC world
-          default: op
       start:
         description: Allows to start the UHC
         default: op
@@ -74,6 +62,3 @@ permissions:
       list:
         description: Allows to list players in the UHC list
         default: true
-    join:
-      description: Allows to join the automated UHC
-      default: true

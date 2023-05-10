@@ -1,5 +1,7 @@
 package me.lesar.uhcplugin;
 
+import com.onarandombox.MultiverseCore.MultiverseCore;
+import com.onarandombox.MultiverseCore.api.MultiverseWorld;
 import me.lesar.uhcplugin.commands.*;
 import me.lesar.uhcplugin.listeners.*;
 import org.bukkit.*;
@@ -8,10 +10,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
 import java.util.*;
 
 public final class UHCPlugin extends JavaPlugin {
+
+	private MultiverseCore mvCore;
 
 	private boolean isActive = false;
 	private boolean isPvPDisabled = false;
@@ -24,18 +27,34 @@ public final class UHCPlugin extends JavaPlugin {
 
 	public Set<Player> allPlayers = new HashSet<>(), alivePlayers = new HashSet<>();
 
-	public String uhcWorldName;
-	public World uhcWorld, currentUhcWorld;
+	public MultiverseWorld uhcWorld;
+	public World currentUhcWorld;
 
 	private Set<BukkitTask> currentTasks = new HashSet<>();
 
+
+
 	@Override
 	public void onEnable() {
+
+		initDepends();
 
 		initConfig();
 
 		registerCommands();
 		registerListeners();
+
+
+
+		generateAutomatedUHCWorld();
+
+	}
+
+
+
+	private void initDepends() {
+
+		mvCore = (MultiverseCore) getServer().getPluginManager().getPlugin("Multiverse-Core");
 
 	}
 
@@ -51,9 +70,6 @@ public final class UHCPlugin extends JavaPlugin {
 		new StartUHCCommand(this);
 		new StopUHCCommand(this);
 
-		new SetUHCWorldCommand(this);
-		new JoinUHCCommand(this);
-
 		new AddPlayerCommand(this);
 		new RemovePlayerCommand(this);
 		new ClearPlayersCommand(this);
@@ -65,32 +81,82 @@ public final class UHCPlugin extends JavaPlugin {
 
 		new PvPListener(this);
 		new DeathListener(this);
-		new DisconnectListener(this);
+		new ConnectionListener(this, mvCore);
 
 	}
 
 
 
-	public void createUHCWorld() {
+	private void generateAutomatedUHCWorld() {
 
-		if(uhcWorldName == null) return;
+		Bukkit.getLogger().info("Generating the UHC world");
+
+		String uhcWorldName = getConfig().getString("auto.world_name");
+
+		// TODO: choose random seed from config
+		long seed = 0;
 
 		WorldCreator creator = new WorldCreator(uhcWorldName);
-		uhcWorld = creator.createWorld();
+		creator.seed(seed);
+		World world = creator.createWorld();
+		uhcWorld = mvCore.getMVWorldManager().getMVWorld(world);
 
-		uhcWorld.getWorldBorder().setCenter(0, 0);
-		uhcWorld.getWorldBorder().setSize(20);
-		uhcWorld.setDifficulty(Difficulty.PEACEFUL);
+		uhcWorld.setGameMode(GameMode.SPECTATOR);
+		world.getWorldBorder().setSize(20);
 
-		Bukkit.getLogger().info("Generating a new UHC world");
+		world.setGameRule(GameRule.SPECTATORS_GENERATE_CHUNKS, false);
+
+		Bukkit.getLogger().info("Generated the UHC world");
+
+	}
+
+	private void regenerateAutomatedUHCWorld() {
+
+		Bukkit.getLogger().info("Regenerating the UHC world");
+
+		for(Player player : uhcWorld.getCBWorld().getPlayers())
+			player.teleport(mvCore.getMVWorldManager().getSpawnWorld().getSpawnLocation());
+
+		String uhcWorldName = getConfig().getString("auto.world_name");
+
+		// TODO: choose random seed from config
+		String seed = "0";
+		mvCore.getMVWorldManager().regenWorld(uhcWorldName, true, false, seed);
 
 	}
 
 
 
-	private BukkitTask startTimerTask;
+	public void playerJoinAutomatedUHC(Player player) {
 
-	public void resetStartTimer() {
+		if(allPlayers.contains(player)) return;
+
+		allPlayers.add(player);
+		resetAutomatedStartTimer();
+
+	}
+
+	public void playerLeaveAutomatedUHC(Player player) {
+
+		cancelAutomatedStartTimer();
+
+		allPlayers.remove(player);
+
+		if(!isActive) return;
+
+		if(alivePlayers.remove(player)) {
+
+			if(alivePlayers.size() <= 1) finishUHC();
+			else for(Player other : allPlayers) other.sendMessage(ChatColor.RED + player.getName() + " has left! " + alivePlayers.size() + " players remain!");
+
+			player.sendMessage(ChatColor.RED + "You have left the UHC");
+
+		}
+
+	}
+
+	private BukkitTask startTimerTask;
+	public void resetAutomatedStartTimer() {
 
 		if(startTimerTask != null) startTimerTask.cancel();
 		if(allPlayers.size() < getConfig().getInt("auto.minimum_players")) return;
@@ -102,7 +168,7 @@ public final class UHCPlugin extends JavaPlugin {
 
 	}
 
-	public void cancelStartTimer() {
+	public void cancelAutomatedStartTimer() {
 
 		if(startTimerTask == null) return;
 		if(startTimerTask.isCancelled()) return;
@@ -121,7 +187,7 @@ public final class UHCPlugin extends JavaPlugin {
 			(float) getConfig().getDouble("auto.border_shrink_timer"),
 			getConfig().getLong("auto.start_border_size_per_player") * allPlayers.size(),
 			getConfig().getLong("auto.end_border_size"),
-			uhcWorld
+			uhcWorld.getCBWorld()
 		);
 
 	}
@@ -212,8 +278,8 @@ public final class UHCPlugin extends JavaPlugin {
 			while(!isGoodLocation){
 
 				isGoodLocation = true;
-				x = (int) (random.nextLong(-size / 2, size / 2)) + (int) uhcWorld.getWorldBorder().getCenter().getX();
-				z = (int) (random.nextLong(-size / 2, size / 2)) + (int) uhcWorld.getWorldBorder().getCenter().getZ();
+				x = (int) (random.nextLong(-size / 2, size / 2)) + (int) uhcWorld.getCBWorld().getWorldBorder().getCenter().getX();
+				z = (int) (random.nextLong(-size / 2, size / 2)) + (int) uhcWorld.getCBWorld().getWorldBorder().getCenter().getZ();
 
 				for(Location location : spawnLocations) {
 
@@ -258,6 +324,13 @@ public final class UHCPlugin extends JavaPlugin {
 
 		for(BukkitTask task : currentTasks) task.cancel();
 		this.currentUhcWorld.getWorldBorder().setSize(this.currentUhcWorld.getWorldBorder().getSize());
+
+		if(currentUhcWorld == uhcWorld.getCBWorld()) {
+
+			for(Player player : currentUhcWorld.getPlayers()) player.sendMessage(ChatColor.RED + "The world is going to close in 10 seconds!");
+			getServer().getScheduler().runTaskLater(this, () -> regenerateAutomatedUHCWorld(), 200L);
+
+		}
 
 	}
 

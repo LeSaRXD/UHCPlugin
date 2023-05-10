@@ -31,6 +31,7 @@ public class DeathListener implements Listener {
 		Player player = e.getPlayer();
 		if(plugin.alivePlayers.remove(player)) {
 
+			e.setCancelled(true);
 			player.setGameMode(GameMode.SPECTATOR);
 
 			Location lightningLocation = player.getLocation();
@@ -41,7 +42,6 @@ public class DeathListener implements Listener {
 
 			if(plugin.alivePlayers.size() == 1) {
 
-				e.setCancelled(true);
 				plugin.finishUHC();
 				return;
 
@@ -50,12 +50,11 @@ public class DeathListener implements Listener {
 			Player killer = player.getKiller();
 			if(killer != null) {
 
-				e.setDeathMessage(ChatColor.RED + player.getName() + " has been eliminated by " + killer.getName() + "! " + plugin.alivePlayers.size() + " players remain!");
+				for(Player other : plugin.allPlayers) other.sendMessage(ChatColor.RED + player.getName() + " has been eliminated by " + killer.getName() + "! " + plugin.alivePlayers.size() + " players remain!");
 
-//				killer.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 20 * 5, 0));
 				killer.getInventory().addItem(new ItemStack(Material.GOLDEN_APPLE));
 
-			} else e.setDeathMessage(ChatColor.RED + player.getName() + " has been eliminated! " + plugin.alivePlayers.size() + " players remain!");
+			} else for(Player other : plugin.allPlayers) other.sendMessage(ChatColor.RED + player.getName() + " has been eliminated! " + plugin.alivePlayers.size() + " players remain!");
 
 		}
 
