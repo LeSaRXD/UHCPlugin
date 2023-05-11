@@ -21,6 +21,11 @@ commands:
     usage: "/stopuhc"
     permission: uhc.manage.stop
     permission-message: "You aren't allowed to use this command!"
+  inituhc:
+    description: Initializes a world for UHC
+    usage: "/inituhc [<world>]"
+    permission: uhc.manage.init
+    permission-message: "You aren't allowed to use this command!"
 
   addplayer:
     description: Adds a player to the UHC list
@@ -51,6 +56,9 @@ permissions:
         default: op
       stop:
         description: Allows to stop the UHC
+        default: op
+      init:
+        description: Allows to initialize a UHC world
         default: op
     players:
       add:

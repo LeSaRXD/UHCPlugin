@@ -50,6 +50,13 @@ public final class UHCPlugin extends JavaPlugin {
 
 	}
 
+	@Override
+	public void onDisable() {
+
+		deleteAutomatedUHCWorld();
+
+	}
+
 
 
 	private void initDepends() {
@@ -69,6 +76,7 @@ public final class UHCPlugin extends JavaPlugin {
 
 		new StartUHCCommand(this);
 		new StopUHCCommand(this);
+		new InitUHCCommand(this);
 
 		new AddPlayerCommand(this);
 		new RemovePlayerCommand(this);
@@ -87,41 +95,77 @@ public final class UHCPlugin extends JavaPlugin {
 
 
 
-	private void generateAutomatedUHCWorld() {
+	private String getRandomConfigSeed() {
 
-		Bukkit.getLogger().info("Generating the UHC world");
+		List<String> seeds = getConfig().getStringList("auto.seeds");
+		Random r = new Random();
+		return seeds.get(r.nextInt(seeds.size()));
 
-		String uhcWorldName = getConfig().getString("auto.world_name");
+	}
 
-		// TODO: choose random seed from config
-		long seed = 0;
+	public boolean initializeUHCWorld(String uhcWorldName) {
 
-		WorldCreator creator = new WorldCreator(uhcWorldName);
-		creator.seed(seed);
-		World world = creator.createWorld();
-		uhcWorld = mvCore.getMVWorldManager().getMVWorld(world);
+		World world = getServer().getWorld(uhcWorldName);
+		if(world == null) return false;
+
+		Bukkit.getLogger().info("Initializing UHC world " + uhcWorldName);
+
+		uhcWorld = mvCore.getMVWorldManager().getMVWorld(uhcWorldName);
+
+		uhcWorld.setSpawnLocation(new Location(world, 0, world.getHighestBlockYAt(0, 0) + 1, 0));
 
 		uhcWorld.setGameMode(GameMode.SPECTATOR);
-		world.getWorldBorder().setSize(20);
-
 		world.setGameRule(GameRule.SPECTATORS_GENERATE_CHUNKS, false);
 
-		Bukkit.getLogger().info("Generated the UHC world");
+		uhcWorld.setDifficulty(Difficulty.PEACEFUL);
+
+		world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+		world.setTime(0);
+
+		world.setGameRule(GameRule.NATURAL_REGENERATION, false);
+
+		return true;
+
+	}
+
+	private void generateAutomatedUHCWorld() {
+
+		String uhcWorldName = getConfig().getString("auto.world_name");
+		String seed = getRandomConfigSeed();
+
+		Bukkit.getLogger().info("Generating the UHC world \"" + uhcWorldName + "\" with seed " + seed);
+
+		mvCore.getMVWorldManager().addWorld(uhcWorldName, World.Environment.NORMAL, seed, WorldType.NORMAL, true, null);
+		initializeUHCWorld(uhcWorldName);
 
 	}
 
 	private void regenerateAutomatedUHCWorld() {
 
-		Bukkit.getLogger().info("Regenerating the UHC world");
+		String uhcWorldName = getConfig().getString("auto.world_name");
+		String seed = getRandomConfigSeed();
 
-		for(Player player : uhcWorld.getCBWorld().getPlayers())
-			player.teleport(mvCore.getMVWorldManager().getSpawnWorld().getSpawnLocation());
+		mvCore.getMVWorldManager().removePlayersFromWorld(uhcWorldName);
+
+		Bukkit.getLogger().info("Regenerating the UHC world \"" + uhcWorldName + "\" with seed " + seed);
+
+		mvCore.getMVWorldManager().regenWorld(uhcWorldName, true, false, seed);
+		initializeUHCWorld(uhcWorldName);
+
+	}
+
+	private void deleteAutomatedUHCWorld() {
 
 		String uhcWorldName = getConfig().getString("auto.world_name");
 
-		// TODO: choose random seed from config
-		String seed = "0";
-		mvCore.getMVWorldManager().regenWorld(uhcWorldName, true, false, seed);
+		if(getServer().getWorld(uhcWorldName) != null) {
+
+			mvCore.getMVWorldManager().removePlayersFromWorld(uhcWorldName);
+
+			Bukkit.getLogger().info("Deleting the UHC world \"" + uhcWorldName + "\"");
+			mvCore.getMVWorldManager().deleteWorld(uhcWorldName);
+
+		}
 
 	}
 
@@ -201,6 +245,8 @@ public final class UHCPlugin extends JavaPlugin {
 		this.currentUhcWorld = uhcWorld;
 
 		uhcWorld.getWorldBorder().setSize(startBorderRadius);
+		uhcWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, true);
+		uhcWorld.setTime(0);
 
 		initPlayers(startBorderRadius);
 
@@ -261,9 +307,9 @@ public final class UHCPlugin extends JavaPlugin {
 
 	}
 
-	private void initPlayers(long size) {
+	private void initPlayers(long borderSize) {
 
-		float minDistanceBetweenPlayers = (float) Math.min(getConfig().getInt("min_distance_between_players"), size / 2);
+		float minDistanceBetweenPlayers = (float) Math.min(getConfig().getInt("min_distance_between_players"), borderSize / 2);
 
 		alivePlayers = new HashSet<>(allPlayers);
 
@@ -278,8 +324,8 @@ public final class UHCPlugin extends JavaPlugin {
 			while(!isGoodLocation){
 
 				isGoodLocation = true;
-				x = (int) (random.nextLong(-size / 2, size / 2)) + (int) uhcWorld.getCBWorld().getWorldBorder().getCenter().getX();
-				z = (int) (random.nextLong(-size / 2, size / 2)) + (int) uhcWorld.getCBWorld().getWorldBorder().getCenter().getZ();
+				x = (int) (random.nextLong(-borderSize / 2, borderSize / 2)) + (int) uhcWorld.getCBWorld().getWorldBorder().getCenter().getX();
+				z = (int) (random.nextLong(-borderSize / 2, borderSize / 2)) + (int) uhcWorld.getCBWorld().getWorldBorder().getCenter().getZ();
 
 				for(Location location : spawnLocations) {
 
@@ -297,7 +343,7 @@ public final class UHCPlugin extends JavaPlugin {
 
 			}
 
-			Location spawnLocation = new Location(currentUhcWorld, x, currentUhcWorld.getHighestBlockAt(x, z).getY() + 1, z);
+			Location spawnLocation = new Location(currentUhcWorld, x, currentUhcWorld.getHighestBlockYAt(x, z) + 1, z);
 			player.teleport(spawnLocation);
 			spawnLocations.add(spawnLocation);
 
@@ -307,6 +353,8 @@ public final class UHCPlugin extends JavaPlugin {
 			player.setFoodLevel(20);
 			player.setSaturation(0.6f);
 			player.setExhaustion(0f);
+
+			player.getInventory().clear();
 
 			player.sendTitle(ChatColor.GREEN + "UHC has started!", ChatColor.GREEN + "PvP has been disabled");
 

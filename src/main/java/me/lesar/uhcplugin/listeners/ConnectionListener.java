@@ -3,6 +3,9 @@ package me.lesar.uhcplugin.listeners;
 import com.onarandombox.MultiverseCore.MultiverseCore;
 import me.lesar.uhcplugin.UHCPlugin;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
+import org.bukkit.GameRule;
+import org.bukkit.World;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
@@ -34,16 +37,12 @@ public class ConnectionListener implements Listener {
 	@EventHandler
 	public void onPlayerChangeWorld(PlayerChangedWorldEvent e) {
 
-		Bukkit.getLogger().info(e.getPlayer().getWorld().getName());
-
 		String uhcWorldName = plugin.getConfig().getString("auto.world_name");
 
-		if(e.getPlayer().getWorld().getName().equals(uhcWorldName)) {
+		World world = e.getPlayer().getWorld();
 
-			plugin.uhcWorld = mvCore.getMVWorldManager().getMVWorld(uhcWorldName);
+		if(world.getName().equals(uhcWorldName))
 			plugin.playerJoinAutomatedUHC(e.getPlayer());
-
-		}
 		else plugin.playerLeaveAutomatedUHC(e.getPlayer());
 
 	}
