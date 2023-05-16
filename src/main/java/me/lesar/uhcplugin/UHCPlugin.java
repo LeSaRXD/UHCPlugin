@@ -202,6 +202,8 @@ public final class UHCPlugin extends JavaPlugin {
 	private BukkitTask startTimerTask;
 	public void resetAutomatedStartTimer() {
 
+		if(getActive()) return;
+
 		if(startTimerTask != null) startTimerTask.cancel();
 		if(allPlayers.size() < getConfig().getInt("auto.minimum_players")) return;
 
