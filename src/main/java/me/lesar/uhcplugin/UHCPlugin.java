@@ -205,8 +205,14 @@ public final class UHCPlugin extends JavaPlugin {
 		if(getActive()) return;
 
 		if(startTimerTask != null) startTimerTask.cancel();
-		if(allPlayers.size() < getConfig().getInt("auto.minimum_players")) return;
+		int minimumPlayers = getConfig().getInt("auto.minimum_players");
+		int playersLeftToStart = minimumPlayers - allPlayers.size();
+		if(playersLeftToStart > 0) {
 
+			for(Player player : allPlayers) player.sendMessage(ChatColor.GOLD + "Waiting for " + playersLeftToStart + " more player" + (playersLeftToStart > 1 ? "s" : "") + " to join");
+			return;
+
+		}
 		int startTimer = getConfig().getInt("auto.start_countdown_timer");
 
 		startTimerTask = getServer().getScheduler().runTaskLater(this, () -> startAutomatedUHC(), startTimer * 20L);
